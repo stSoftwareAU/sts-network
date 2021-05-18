@@ -4,7 +4,7 @@ BASE_DIR="$( cd -P "$( dirname "$BASH_SOURCE" )" && pwd -P )"
 cd "${BASE_DIR}"
 
 source environment.properties
-export DOCKER_TAG="dta-iac/jenkins-pipeline"
+export DOCKER_TAG="dta-iac/common-pipeline"
 
 ASSUME_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}"
 
