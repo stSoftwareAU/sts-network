@@ -45,30 +45,33 @@ module "subnet_addrs" {
   networks = [
     {
       name     = "ap-southeast-2a"
-      new_bits = 8
+      new_bits = 2
     },
     {
       name     = "ap-southeast-2b"
-      new_bits = 8
+      new_bits = 2
     },
     {
       name     = "ap-southeast-2c"
-      new_bits = 8
+      new_bits = 2
     },
   ]
 }
 
 resource "aws_vpc" "main" {
   cidr_block = module.subnet_addrs.base_cidr_block
-    tags = {
+  tags = {
     Name = "main"
   }
 }
 
 resource "aws_subnet" "main" {
   for_each = module.subnet_addrs.network_cidr_blocks
-
-  vpc_id            = aws_vpc.main.id
-  availability_zone = each.key
-  cidr_block        = each.value
+    vpc_id            = aws_vpc.main.id
+    availability_zone = each.key
+    cidr_block        = each.value
+    
+    tags={
+      Name = join( "",["Main Private-",upper( substr(strrev(each.key),0,1) )])
+    }
 }
