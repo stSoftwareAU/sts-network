@@ -75,3 +75,23 @@ resource "aws_subnet" "main" {
       Name = join( "",["Main Private-",upper( substr(strrev(each.key),0,1) )])
     }
 }
+
+resource "aws_eip" "nat" {
+  count=length(aws_subnet.main)
+  vpc = true
+
+  tags = {
+    Name = join( "",["EIP-",upper( substr(strrev(values(aws_subnet.main)[count.index].availability_zone),0,1) )])
+  }
+}
+
+resource "aws_nat_gateway" "nat" {
+  count=length(aws_subnet.main)
+
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = values(aws_subnet.main)[count.index].id
+
+  tags = {
+    Name = join( "",["NAT-",upper( substr(strrev(values(aws_subnet.main)[count.index].availability_zone),0,1) )])
+  }
+}
