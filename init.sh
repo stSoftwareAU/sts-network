@@ -12,7 +12,7 @@ export DOCKER_TAG=`tr "[:upper:]" "[:lower:]" <<< "${DEPARTMENT}-iac/${BASE_DIR#
 
 ASSUME_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}"
 
-TEMP_ROLE=`aws sts assume-role --profile dga-identity --role-arn $ASSUME_ROLE_ARN --role-session-name "Deploy-pipeline"`
+TEMP_ROLE=`aws sts assume-role --profile dga-identity --role-arn $ASSUME_ROLE_ARN --role-session-name "Deploy ${BASE_DIR##*/}"`
 
 export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
 export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
