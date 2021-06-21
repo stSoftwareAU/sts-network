@@ -8,11 +8,12 @@ if [[ -f ${ENV_FILE} ]]; then
     source ${ENV_FILE} 
 fi
 
-if [[ -z "${DEPARTMENT}" ]] || [[ -z "${AREA}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${ROLE}" ]]; then
-  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), ROLE(${ROLE}) and AREA(${AREA})"
+if [[ -z "${DEPARTMENT}" ]] || [[ -z "${AREA}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]] || [[ -z "${ROLE}" ]]; then
+  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}), ROLE(${ROLE}) and AREA(${AREA})"
   exit 1
 fi
 
+export REGION="${REGION}"
 export DOCKER_TAG=`tr "[:upper:]" "[:lower:]" <<< "${DEPARTMENT}-iac/${BASE_DIR##*/}"`
 
 ASSUME_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}"
