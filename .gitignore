@@ -1,0 +1,3 @@
+# Ignore invisible
+.*
+!/.gitignore
