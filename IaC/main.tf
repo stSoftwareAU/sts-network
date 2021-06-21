@@ -108,7 +108,7 @@ resource "aws_subnet" "public" {
   for_each = module.public_subnet_addrs.network_cidr_blocks
     vpc_id            = aws_vpc.public.id
     availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
-
+    map_public_ip_on_launch = true
     cidr_block        = each.value
         
     tags={
@@ -156,27 +156,35 @@ resource "aws_nat_gateway" "nat" {
   }
 }
 
-resource "aws_internet_gateway" "nat_gateway" {
+resource "aws_internet_gateway" "public" {
   vpc_id = aws_vpc.public.id
   tags = {
-    "Name" = "NAT Gateway"
+    "Name" = "Public IG"
   }
 }
 
-resource "aws_route_table" "nat_gateway" {
+resource "aws_route_table" "public" {
   vpc_id = aws_vpc.public.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.nat_gateway.id
+    gateway_id = aws_internet_gateway.public.id
   }
 }
 
-resource "aws_route_table_association" "nat_gateway" {
+resource "aws_route_table_association" "public" {
   count=length(aws_subnet.public)
 
   subnet_id     = values(aws_subnet.public)[count.index].id
 
-  route_table_id = aws_route_table.nat_gateway.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "main" {
+  count=length(aws_subnet.main)
+
+  subnet_id     = values(aws_subnet.main)[count.index].id
+
+  route_table_id = aws_route_table.main.id
 }
 
 resource "aws_security_group" "allow_ssm" {
