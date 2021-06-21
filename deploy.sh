@@ -16,6 +16,9 @@ s3_store="${S3_BUCKET}/${DOCKER_TAG}/store"
 
 aws s3 cp s3://${s3_store} ${store_dir} --recursive
 
+# echo "${store_dir}, continue ?"
+# read varname
+
 docker build --tag ${DOCKER_TAG} .
 
 docker run \

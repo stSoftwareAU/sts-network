@@ -98,11 +98,11 @@ module "public_subnet_addrs" {
 
 resource "aws_vpc" "public" {
   cidr_block = var.public_cidr_block
+  enable_dns_hostnames=true
   tags = {
     Name = "Public"
   }
 }
-
 
 resource "aws_subnet" "public" {
   for_each = module.public_subnet_addrs.network_cidr_blocks
@@ -118,6 +118,7 @@ resource "aws_subnet" "public" {
 
 resource "aws_vpc" "main" {
   cidr_block = var.main_cidr_block
+  enable_dns_hostnames=true
   tags = {
     Name = "Main"
   }
@@ -176,4 +177,104 @@ resource "aws_route_table_association" "nat_gateway" {
   subnet_id     = values(aws_subnet.public)[count.index].id
 
   route_table_id = aws_route_table.nat_gateway.id
+}
+
+resource "aws_security_group" "allow_ssm" {
+  name        = "allow_ssm"
+  description = "Allow Session Manager traffic"
+  vpc_id      = aws_vpc.main.id
+  ingress                = [
+    {
+        cidr_blocks      = [
+              var.main_cidr_block,
+          ]
+        description      = "SSM"
+          from_port        = 443
+          ipv6_cidr_blocks = []
+          prefix_list_ids  = []
+          protocol         = "tcp"
+          security_groups  = []
+          self             = false
+          to_port          = 443
+      },
+  ]
+        
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = {
+    Name = "Allow SSM"
+  }
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = join( "",["com.amazonaws.", var.region,".s3"])
+  vpc_endpoint_type = "Gateway"
+  tags = {
+    Name = "S3 endpoint"
+  }
+}
+
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id       = aws_vpc.main.id
+  service_name = join( "",["com.amazonaws.", var.region,".ssm"])
+  vpc_endpoint_type = "Interface"
+  private_dns_enabled = true
+  security_group_ids = [
+    aws_security_group.allow_ssm.id,
+  ]
+  tags = {
+    Name = "SSM"
+  }
+}
+
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id       = aws_vpc.main.id
+  service_name = join( "",["com.amazonaws.", var.region,".ec2messages"])
+  vpc_endpoint_type = "Interface"
+  private_dns_enabled = true
+  security_group_ids = [
+    aws_security_group.allow_ssm.id,
+  ]
+  tags = {
+    Name = "EC2 Messages"
+  }
+}
+
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id       = aws_vpc.main.id
+  service_name = join( "",["com.amazonaws.", var.region,".ssmmessages"])
+  vpc_endpoint_type = "Interface"
+  private_dns_enabled = true
+  security_group_ids = [
+    aws_security_group.allow_ssm.id,
+  ]  
+  tags = {
+    Name = "SSM Messages"
+  }
+}
+
+resource "aws_vpc_endpoint_subnet_association" "ssm" {
+  count=length(aws_subnet.main)
+  vpc_endpoint_id = aws_vpc_endpoint.ssm.id
+  subnet_id       = values(aws_subnet.main)[count.index].id
+}
+
+resource "aws_vpc_endpoint_subnet_association" "ec2messages" {
+  count=length(aws_subnet.main)
+  vpc_endpoint_id = aws_vpc_endpoint.ec2messages.id
+  subnet_id       = values(aws_subnet.main)[count.index].id
+}
+
+resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
+  count=length(aws_subnet.main)
+  vpc_endpoint_id = aws_vpc_endpoint.ssmmessages.id
+  subnet_id       = values(aws_subnet.main)[count.index].id
 }
