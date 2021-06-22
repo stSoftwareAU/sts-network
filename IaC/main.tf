@@ -23,30 +23,6 @@ variable "main_cidr_block" {
   }
 }
 
-variable "public_cidr_block" {  
-  type        = string  
-  description = "Address range for the virtual network in CIDR notation. CIDR must be a /16 or better."  
-  default = "192.168.0.0/16"
-  validation {    
-    condition     = tonumber(regex("/(\\d+)", var.public_cidr_block)[0]) >= 16   
-    error_message = "A CIDR range of /16 of more is required for the public VPC."  
-  }
-}
-
-variable "public_new_bits" {  
-  type        = number  
-  description = "Public new bits per subnet"  
-  default = 2
-  validation {    
-    condition     = var.public_new_bits>=2  
-    error_message = "Must be more than 2."  
-  }
-  validation {    
-    condition     = var.public_new_bits<20  
-    error_message = "Must be less than 20."  
-  }
-}
-
 provider "aws" {
   region=var.region
 
@@ -58,76 +34,64 @@ module "main_subnet_addrs" {
   base_cidr_block = var.main_cidr_block
   networks = [
     {
-      name     = "Main-A"
+      name     = "Private-A"
       new_bits = 2
     },
-
     {
-      name     = "Main-B"
+      name     = "Private-B"
       new_bits = 2
     },
-
     {
-      name     = "Main-C"
+      name     = "Private-C"
       new_bits = 2
-    }
-  ]
-}
-
-module "public_subnet_addrs" {
-  source = "hashicorp/subnets/cidr"
-
-  base_cidr_block = var.public_cidr_block
-  networks = [
+    },
     {
       name     = "Public-A"
-      new_bits = var.public_new_bits
+      new_bits = 4
     },
-
     {
       name     = "Public-B"
-      new_bits = var.public_new_bits
+      new_bits = 4
     },
-
     {
       name     = "Public-C"
-      new_bits = var.public_new_bits
-    },
+      new_bits = 4
+    }
   ]
 }
 
-resource "aws_vpc" "public" {
-  cidr_block = var.public_cidr_block
-  enable_dns_hostnames=true
-  tags = {
-    Name = "Public"
-  }
+locals {
+  public_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks :  k => v if substr(k,0,6) == "Public"}
+  private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks :  k => v if substr(k,0,6) != "Public"}
 }
 
-resource "aws_subnet" "public" {
-  for_each = module.public_subnet_addrs.network_cidr_blocks
-    vpc_id            = aws_vpc.public.id
-    availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
-    map_public_ip_on_launch = true
-    cidr_block        = each.value
-        
-    tags={
-      Name = each.key
-    }
-}
 
 resource "aws_vpc" "main" {
   cidr_block = var.main_cidr_block
   enable_dns_hostnames=true
+
   tags = {
     Name = "Main"
   }
 }
 
-resource "aws_subnet" "main" {
-  for_each = module.main_subnet_addrs.network_cidr_blocks
+resource "aws_subnet" "private" {
+  for_each = local.private_cidr_blocks
     vpc_id            = aws_vpc.main.id
+
+    availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
+    cidr_block        = each.value
     
+    tags={
+      Name = each.key
+    }
+}
+
+resource "aws_subnet" "public" {
+  for_each = local.public_cidr_blocks
+    vpc_id            = aws_vpc.main.id
+    map_public_ip_on_launch = true
+
     availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
     cidr_block        = each.value
     
@@ -157,17 +121,20 @@ resource "aws_nat_gateway" "nat" {
 }
 
 resource "aws_internet_gateway" "public" {
-  vpc_id = aws_vpc.public.id
+  vpc_id = aws_vpc.main.id
   tags = {
     "Name" = "Public IG"
   }
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.public.id
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.public.id
+  }
+    tags={
+      Name = "Public"
   }
 }
 
@@ -179,12 +146,26 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route_table_association" "main" {
-  count=length(aws_subnet.main)
+resource "aws_route_table" "private" {
+  count=length(aws_subnet.private)
 
-  subnet_id     = values(aws_subnet.main)[count.index].id
+  vpc_id= aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id= aws_nat_gateway.nat[count.index].id
+  }
 
-  route_table_id = aws_route_table.main.id
+  tags={
+      Name = join( "",["Private-",upper( substr(strrev(values(aws_subnet.public)[count.index].availability_zone),0,1) )])
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count=length(aws_subnet.private)
+
+  subnet_id     = values(aws_subnet.private)[count.index].id
+
+  route_table_id =  aws_route_table.private[count.index].id
 }
 
 resource "aws_security_group" "allow_ssm" {
@@ -206,7 +187,6 @@ resource "aws_security_group" "allow_ssm" {
           to_port          = 443
       },
   ]
-        
 
   egress {
     from_port        = 0
@@ -270,19 +250,19 @@ resource "aws_vpc_endpoint" "ssmmessages" {
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ssm" {
-  count=length(aws_subnet.main)
+  count=length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssm.id
-  subnet_id       = values(aws_subnet.main)[count.index].id
+  subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ec2messages" {
-  count=length(aws_subnet.main)
+  count=length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ec2messages.id
-  subnet_id       = values(aws_subnet.main)[count.index].id
+  subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
-  count=length(aws_subnet.main)
+  count=length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssmmessages.id
-  subnet_id       = values(aws_subnet.main)[count.index].id
+  subnet_id       = values(aws_subnet.private)[count.index].id
 }
