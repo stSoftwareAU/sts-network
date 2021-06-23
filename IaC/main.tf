@@ -75,6 +75,17 @@ resource "aws_vpc" "main" {
   }
 }
 
+/*
+ * Subnet types. 
+ * 
+ * Name	     Description
+ * --------  --------------------------------------------------------------------
+ * ISOLATED	 Isolated Subnets do not route traffic to the Internet (in this VPC).
+ * PRIVATE	 Subnet that routes to the internet, but not vice versa.
+ * PUBLIC	   Subnet connected to the Internet.
+
+ * https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ec2.SubnetType.html
+ */
 resource "aws_subnet" "private" {
   for_each = local.private_cidr_blocks
     vpc_id            = aws_vpc.main.id
@@ -84,6 +95,7 @@ resource "aws_subnet" "private" {
     
     tags={
       Name = each.key
+      Type = "PRIVATE"
     }
 }
 
@@ -97,6 +109,7 @@ resource "aws_subnet" "public" {
     
     tags={
       Name = each.key
+      Type = "PUBLIC"
     }
 }
 
