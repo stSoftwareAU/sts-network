@@ -5,9 +5,13 @@ cd "${BASE_DIR}"
 
 . ./init.sh
 
-jq --arg key0   'region' \
-   --arg value0 "ap-southeast-2" \
-   '. | .[$key0]=$value0 ' \
+jq --arg key0   'area' \
+   --arg value0 "${AREA}" \
+   --arg key1   'region' \
+   --arg value1 "ap-southeast-2" \
+   --arg key2   'department' \
+   --arg value2 "${DEPARTMENT}" \
+   '. | .[$key0]=$value0 | .[$key1]=$value1| .[$key2]=$value2 ' \
    <<<'{}' > IaC/01_deploy.auto.tfvars.json
 
 store_dir=$(mktemp -d -t tf_XXXXXXXXXX)

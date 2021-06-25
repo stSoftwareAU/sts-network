@@ -9,6 +9,16 @@ terraform {
   required_version = ">= 0.14.9"
 }
 
+variable "area"{
+  type        = string
+  description = "The Area"
+}
+
+variable "department"{
+  type        = string
+  description = "The Department"
+}
+
 variable "region"{
   type        = string
   description = "The AWS region"
@@ -278,4 +288,77 @@ resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
   count=length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssmmessages.id
   subnet_id       = values(aws_subnet.private)[count.index].id
+}
+
+/*
+ * Log bucket
+ */
+resource "aws_s3_bucket" "logs" {
+  bucket = join( "-",[ lower( var.department ), "logs", lower( var.area ), lower( var.region )])
+  acl    = "private"
+
+  tags = {
+    Name        = "Logs"
+    Environment = var.area
+  }
+
+  versioning {
+    enabled = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  lifecycle_rule {
+    id      = "log"
+    enabled = true
+
+    prefix = "/"
+
+    tags = {
+      rule      = "log"
+      autoclean = "true"
+    }
+
+    noncurrent_version_expiration{
+      days=30
+    }
+
+    # abort_incomplete_multipart_upload_days=7
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = 60
+      storage_class = "ONEZONE_IA"
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+
+    expiration {
+      days = 365
+
+      expired_object_delete_marker=true
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  block_public_acls   = true
+  block_public_policy = true
+  ignore_public_acls = true
+  restrict_public_buckets = true
 }
