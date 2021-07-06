@@ -3,34 +3,40 @@ set -e
 BASE_DIR="$( cd -P "$( dirname "$BASH_SOURCE" )" && pwd -P )"
 cd "${BASE_DIR}"
 
+REPO=$(basename -s .git `git config --get remote.origin.url`)
+
 ENV_FILE=".env.properties"
 if [[ -f ${ENV_FILE} ]]; then
     source ${ENV_FILE} 
 fi
 
-if [[ -z "${DEPARTMENT}" ]] || [[ -z "${AREA}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]] || [[ -z "${ROLE}" ]]; then
-  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}), ROLE(${ROLE}) and AREA(${AREA})"
+if [[ -z "${DEPARTMENT}" ]] || [[ -z "${AREA}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]]; then
+  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
   exit 1
 fi
 
+echo "Deploying DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
+
 export REGION="${REGION}"
-export DOCKER_TAG=`tr "[:upper:]" "[:lower:]" <<< "${DEPARTMENT}-iac/${BASE_DIR##*/}"`
+export DOCKER_TAG=`tr "[:upper:]" "[:lower:]" <<< "${REPO}"`
 
-ASSUME_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}"
+if [[ ! -z "${ROLE}" ]]; then
+  ASSUME_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}"
 
-profileArg=""
+  profileArg=""
 
-if [[ ! -z "${PROFILE}" ]]; then
-  profileArg=" --profile ${PROFILE}"
-fi
+  if [[ ! -z "${PROFILE}" ]]; then
+    profileArg=" --profile ${PROFILE}"
+  fi
 
-TEMP_ROLE=`aws sts assume-role ${profileArg} --role-arn $ASSUME_ROLE_ARN --role-session-name "Deploy_${BASE_DIR##*/}"`
+  TEMP_ROLE=`aws sts assume-role ${profileArg} --role-arn $ASSUME_ROLE_ARN --role-session-name "Deploy_${REPO}"`
 
-export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
-export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
-export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
+  export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
+  export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
+  export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
+fi 
 
-export S3_BUCKET=`echo "${DEPARTMENT}-${AREA}-iac-v4"|tr "[:upper:]" "[:lower:]"`
+export S3_BUCKET=`echo "${DEPARTMENT}-iac-${AREA}-${REGION}"|tr "[:upper:]" "[:lower:]"`
 LIST_BUCKETS=`aws s3api list-buckets`
 
 CreationDate=`jq ".Buckets[]|select(.Name==\"${S3_BUCKET}\").CreationDate" <<< "$LIST_BUCKETS"`

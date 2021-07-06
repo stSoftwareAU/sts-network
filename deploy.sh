@@ -5,23 +5,24 @@ cd "${BASE_DIR}"
 
 . ./init.sh
 
-jq --arg key0   'area' \
-   --arg value0 "${AREA}" \
-   --arg key1   'region' \
-   --arg value1 "ap-southeast-2" \
-   --arg key2   'department' \
-   --arg value2 "${DEPARTMENT}" \
-   '. | .[$key0]=$value0 | .[$key1]=$value1| .[$key2]=$value2 ' \
-   <<<'{}' > IaC/01_deploy.auto.tfvars.json
+tf_dir=$(mktemp -d -t tf_XXXXXXXXXX)
 
-store_dir=$(mktemp -d -t tf_XXXXXXXXXX)
+s3_tf="${S3_BUCKET}/${DOCKER_TAG}"
 
-s3_store="${S3_BUCKET}/${DOCKER_TAG}/store"
+aws s3 cp s3://${s3_tf} ${tf_dir} --recursive
 
-aws s3 cp s3://${s3_store} ${store_dir} --recursive
+mkdir -p ${tf_dir}/store
+tmpVars=$(mktemp /tmp/tf-vars.XXXXXX)
 
-# echo "${store_dir}, continue ?"
-# read varname
+if [[ -s ${tf_dir}/config.json ]]; then
+    jq ".tfvars//{}" <<< ${tf_dir}/config.json > ${tmpVars} 
+else 
+    echo "{}" > ${tmpVars}  
+fi
+
+jq ".area=\"${AREA}\" | .region=\"${REGION}\" | .department=\"${DEPARTMENT}\"" ${tmpVars} > IaC/.auto.tfvars.json
+
+rm ${tmpVars}
 
 docker build --tag ${DOCKER_TAG} .
 
@@ -30,11 +31,11 @@ docker run \
     --env AWS_ACCESS_KEY_ID \
     --env AWS_SECRET_ACCESS_KEY \
     --env AWS_SESSION_TOKEN \
-    --volume ${store_dir}:/home/IaC/store \
+    --volume ${tf_dir}/store:/home/IaC/store \
     ${DOCKER_TAG} \
     apply
 
-aws s3 cp ${store_dir} s3://${s3_store} --recursive
+aws s3 cp ${tf_dir}/store s3://${s3_tf}/store --recursive
 
 rm -f IaC/01_deploy.auto.tfvars.json
 rm -rf ${store_dir}
