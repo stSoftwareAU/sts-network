@@ -37,5 +37,5 @@ docker run \
 
 aws s3 cp ${tf_dir}/store s3://${s3_tf}/store --recursive
 
-rm -f IaC/01_deploy.auto.tfvars.json
+rm -f IaC/.auto.tfvars.json
 rm -rf ${store_dir}
