@@ -36,10 +36,15 @@ if [[ ! -z "${ROLE}" ]]; then
   export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
 fi 
 
-export S3_BUCKET=`echo "${DEPARTMENT}-iac-${AREA}-${REGION}"|tr "[:upper:]" "[:lower:]"`
+export S3_BUCKET=`echo "${DEPARTMENT}-terraform-${AREA}-${REGION}"|tr "[:upper:]" "[:lower:]"`
 LIST_BUCKETS=`aws s3api list-buckets`
 
 CreationDate=`jq ".Buckets[]|select(.Name==\"${S3_BUCKET}\").CreationDate" <<< "$LIST_BUCKETS"`
 if [[ -z "${CreationDate}" ]]; then
-    ./create-bucket.sh
+    if [[ -s ./create-bucket.sh ]]; then
+      ./create-bucket.sh
+    else
+      echo "No bucket ${S3_BUCKET}"
+      exit 1
+    fi
 fi
