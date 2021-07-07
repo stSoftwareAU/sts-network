@@ -15,7 +15,7 @@ mkdir -p ${tf_dir}/store
 tmpVars=$(mktemp /tmp/tf-vars.XXXXXX)
 
 if [[ -s ${tf_dir}/config.json ]]; then
-    jq ".tfvars//{}" <<< ${tf_dir}/config.json > ${tmpVars} 
+    jq ".tfvars//{}" ${tf_dir}/config.json > ${tmpVars} 
 else 
     echo "{}" > ${tmpVars}  
 fi
@@ -38,4 +38,3 @@ docker run \
 aws s3 cp ${tf_dir}/store s3://${s3_tf}/store --recursive
 
 rm -f IaC/.auto.tfvars.json
-rm -rf ${store_dir}
