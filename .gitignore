@@ -1,4 +1,3 @@
 # Ignore invisible
 .*
 !/.gitignore
-Iac/01_deploy.auto.tfvars.json
