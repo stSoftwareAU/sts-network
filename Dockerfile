@@ -1,15 +1,22 @@
 # syntax=docker/dockerfile:1
+#
+# WARNING: Automatically copied from dga-template
+#
 FROM hashicorp/terraform:light
 
-COPY --chown=nobody:nobody docker-entrypoint.sh .
-RUN chmod u+x docker-entrypoint.sh
+COPY --chown=nobody:nobody entrypoint.sh .
+RUN chmod u+x entrypoint.sh
 
 RUN mkdir /home/IaC
 
 WORKDIR /home/IaC
 
-COPY --chown=nobody:nobody IaC/ .
+COPY IaC/ .
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+RUN chown -R nobody:nobody /home/IaC
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+USER nobody
 
 CMD ["apply"]
