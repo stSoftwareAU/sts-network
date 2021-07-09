@@ -10,14 +10,23 @@ if [[ -f ${ENV_FILE} ]]; then
     source ${ENV_FILE} 
 fi
 
-if [[ -z "${DEPARTMENT}" ]] || [[ -z "${AREA}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]]; then
-  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
+if [[ -z "${DEPARTMENT}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]]; then
+  echo "Must specify the follow environment variables DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}) and REGION(${REGION})"
   exit 1
 fi
 
-echo "Deploying DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
+tmpAREA=`git branch --show-current`
+
+if [[ "${tmpAREA}" =~ (Production|Staging) ]]; then
+  AREA="${tmpAREA}"
+else
+  AREA="scratch"
+fi
+
+echo "Initialize DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
 
 export REGION="${REGION}"
+export AWS_DEFAULT_REGION="${REGION}"
 export DOCKER_TAG=`tr "[:upper:]" "[:lower:]" <<< "${REPO}"`
 
 if [[ ! -z "${ROLE}" ]]; then
