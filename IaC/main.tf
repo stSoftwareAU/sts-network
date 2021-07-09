@@ -9,32 +9,32 @@ terraform {
   required_version = ">= 0.14.9"
 }
 
-variable "area"{
+variable "area" {
   type        = string
   description = "The Area"
 }
 
-variable "department"{
+variable "department" {
   type        = string
   description = "The Department"
 }
 
-variable "region"{
+variable "region" {
   type        = string
   description = "The AWS region"
 }
 
-variable "main_cidr_block" {  
-  type        = string  
-  description = "Address range for the virtual network in CIDR notation. CIDR must be a /21."  
-  validation {    
-    condition     = tonumber(regex("/(\\d+)", var.main_cidr_block)[0]) == 21    
-    error_message = "A CIDR range of /21 is required to support enough IPs."  
+variable "main_cidr_block" {
+  type        = string
+  description = "Address range for the virtual network in CIDR notation. CIDR must be a /21."
+  validation {
+    condition     = tonumber(regex("/(\\d+)", var.main_cidr_block)[0]) == 21
+    error_message = "A CIDR range of /21 is required to support enough IPs."
   }
 }
 
 provider "aws" {
-  region=var.region
+  region = var.region
 
 }
 
@@ -71,14 +71,14 @@ module "main_subnet_addrs" {
 }
 
 locals {
-  public_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks :  k => v if substr(k,0,6) == "Public"}
-  private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks :  k => v if substr(k,0,6) != "Public"}
+  public_cidr_blocks  = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6) == "Public" }
+  private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6) != "Public" }
 }
 
 
 resource "aws_vpc" "main" {
-  cidr_block = var.main_cidr_block
-  enable_dns_hostnames=true
+  cidr_block           = var.main_cidr_block
+  enable_dns_hostnames = true
 
   tags = {
     Name = "Main"
@@ -98,48 +98,48 @@ resource "aws_vpc" "main" {
  */
 resource "aws_subnet" "private" {
   for_each = local.private_cidr_blocks
-    vpc_id            = aws_vpc.main.id
+  vpc_id   = aws_vpc.main.id
 
-    availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
-    cidr_block        = each.value
-    
-    tags={
-      Name = each.key
-      Type = "PRIVATE"
-    }
+  availability_zone = join("", [var.region, lower(substr(each.key, -1, 1))])
+  cidr_block        = each.value
+
+  tags = {
+    Name = each.key
+    Type = "PRIVATE"
+  }
 }
 
 resource "aws_subnet" "public" {
-  for_each = local.public_cidr_blocks
-    vpc_id            = aws_vpc.main.id
-    map_public_ip_on_launch = true
+  for_each                = local.public_cidr_blocks
+  vpc_id                  = aws_vpc.main.id
+  map_public_ip_on_launch = true
 
-    availability_zone = join( "",[var.region,lower(substr(each.key,-1,1)) ])
-    cidr_block        = each.value
-    
-    tags={
-      Name = each.key
-      Type = "PUBLIC"
-    }
+  availability_zone = join("", [var.region, lower(substr(each.key, -1, 1))])
+  cidr_block        = each.value
+
+  tags = {
+    Name = each.key
+    Type = "PUBLIC"
+  }
 }
 
 resource "aws_eip" "nat" {
-  count=length(aws_subnet.public)
-  vpc = true
+  count = length(aws_subnet.public)
+  vpc   = true
 
   tags = {
-    Name = join( "",["EIP-",upper( substr(strrev(values(aws_subnet.public)[count.index].availability_zone),0,1) )])
+    Name = join("", ["EIP-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
   }
 }
 
 resource "aws_nat_gateway" "nat" {
-  count=length(aws_subnet.public)
+  count = length(aws_subnet.public)
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = values(aws_subnet.public)[count.index].id
 
   tags = {
-    Name = join( "",["NAT-",upper( substr(strrev(values(aws_subnet.public)[count.index].availability_zone),0,1) )])
+    Name = join("", ["NAT-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
   }
 }
 
@@ -156,59 +156,59 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.public.id
   }
-    tags={
-      Name = "Public"
+  tags = {
+    Name = "Public"
   }
 }
 
 resource "aws_route_table_association" "public" {
-  count=length(aws_subnet.public)
+  count = length(aws_subnet.public)
 
-  subnet_id     = values(aws_subnet.public)[count.index].id
+  subnet_id = values(aws_subnet.public)[count.index].id
 
   route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table" "private" {
-  count=length(aws_subnet.private)
+  count = length(aws_subnet.private)
 
-  vpc_id= aws_vpc.main.id
+  vpc_id = aws_vpc.main.id
   route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id= aws_nat_gateway.nat[count.index].id
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat[count.index].id
   }
 
-  tags={
-      Name = join( "",["Private-",upper( substr(strrev(values(aws_subnet.public)[count.index].availability_zone),0,1) )])
+  tags = {
+    Name = join("", ["Private-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
   }
 }
 
 resource "aws_route_table_association" "private" {
-  count=length(aws_subnet.private)
+  count = length(aws_subnet.private)
 
-  subnet_id     = values(aws_subnet.private)[count.index].id
+  subnet_id = values(aws_subnet.private)[count.index].id
 
-  route_table_id =  aws_route_table.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
 resource "aws_security_group" "allow_ssm" {
   name        = "allow_ssm"
   description = "Allow Session Manager traffic"
   vpc_id      = aws_vpc.main.id
-  ingress                = [
+  ingress = [
     {
-        cidr_blocks      = [
-              var.main_cidr_block,
-          ]
-        description      = "SSM"
-          from_port        = 443
-          ipv6_cidr_blocks = []
-          prefix_list_ids  = []
-          protocol         = "tcp"
-          security_groups  = []
-          self             = false
-          to_port          = 443
-      },
+      cidr_blocks = [
+        var.main_cidr_block,
+      ]
+      description      = "SSM"
+      from_port        = 443
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      protocol         = "tcp"
+      security_groups  = []
+      self             = false
+      to_port          = 443
+    },
   ]
 
   egress {
@@ -225,8 +225,8 @@ resource "aws_security_group" "allow_ssm" {
 }
 
 resource "aws_vpc_endpoint" "s3" {
-  vpc_id       = aws_vpc.main.id
-  service_name = join( "",["com.amazonaws.", var.region,".s3"])
+  vpc_id            = aws_vpc.main.id
+  service_name      = join("", ["com.amazonaws.", var.region, ".s3"])
   vpc_endpoint_type = "Gateway"
   tags = {
     Name = "S3 endpoint"
@@ -234,9 +234,9 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "ssm" {
-  vpc_id       = aws_vpc.main.id
-  service_name = join( "",["com.amazonaws.", var.region,".ssm"])
-  vpc_endpoint_type = "Interface"
+  vpc_id              = aws_vpc.main.id
+  service_name        = join("", ["com.amazonaws.", var.region, ".ssm"])
+  vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
   security_group_ids = [
     aws_security_group.allow_ssm.id,
@@ -247,9 +247,9 @@ resource "aws_vpc_endpoint" "ssm" {
 }
 
 resource "aws_vpc_endpoint" "ec2messages" {
-  vpc_id       = aws_vpc.main.id
-  service_name = join( "",["com.amazonaws.", var.region,".ec2messages"])
-  vpc_endpoint_type = "Interface"
+  vpc_id              = aws_vpc.main.id
+  service_name        = join("", ["com.amazonaws.", var.region, ".ec2messages"])
+  vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
   security_group_ids = [
     aws_security_group.allow_ssm.id,
@@ -260,32 +260,32 @@ resource "aws_vpc_endpoint" "ec2messages" {
 }
 
 resource "aws_vpc_endpoint" "ssmmessages" {
-  vpc_id       = aws_vpc.main.id
-  service_name = join( "",["com.amazonaws.", var.region,".ssmmessages"])
-  vpc_endpoint_type = "Interface"
+  vpc_id              = aws_vpc.main.id
+  service_name        = join("", ["com.amazonaws.", var.region, ".ssmmessages"])
+  vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
   security_group_ids = [
     aws_security_group.allow_ssm.id,
-  ]  
+  ]
   tags = {
     Name = "SSM Messages"
   }
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ssm" {
-  count=length(aws_subnet.private)
+  count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssm.id
   subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ec2messages" {
-  count=length(aws_subnet.private)
+  count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ec2messages.id
   subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
 resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
-  count=length(aws_subnet.private)
+  count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssmmessages.id
   subnet_id       = values(aws_subnet.private)[count.index].id
 }
@@ -294,7 +294,7 @@ resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
  * Log bucket
  */
 resource "aws_s3_bucket" "logs" {
-  bucket = join( "-",[ lower( var.department ), "logs", lower( var.area ), lower( var.region )])
+  bucket = join("-", [lower(var.department), "logs", lower(var.area), lower(var.region)])
   acl    = "private"
 
   tags = {
@@ -325,8 +325,8 @@ resource "aws_s3_bucket" "logs" {
       autoclean = "true"
     }
 
-    noncurrent_version_expiration{
-      days=30
+    noncurrent_version_expiration {
+      days = 30
     }
 
     # abort_incomplete_multipart_upload_days=7
@@ -349,7 +349,7 @@ resource "aws_s3_bucket" "logs" {
     expiration {
       days = 365
 
-      expired_object_delete_marker=true
+      expired_object_delete_marker = true
     }
   }
 }
@@ -357,8 +357,8 @@ resource "aws_s3_bucket" "logs" {
 resource "aws_s3_bucket_public_access_block" "logs" {
   bucket = aws_s3_bucket.logs.id
 
-  block_public_acls   = true
-  block_public_policy = true
-  ignore_public_acls = true
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
   restrict_public_buckets = true
 }
