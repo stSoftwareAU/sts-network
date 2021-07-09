@@ -6,11 +6,13 @@ set -e
 BASE_DIR="$( cd -P "$( dirname "$BASH_SOURCE" )" && pwd -P )"
 cd "${BASE_DIR}"
 
-REPO=$(basename -s .git `git config --get remote.origin.url`)
-
 ENV_FILE=".env.properties"
 if [[ -f ${ENV_FILE} ]]; then
     source ${ENV_FILE} 
+fi
+
+if [[ -z "${REPO}" ]]; then
+  REPO=$(basename -s .git `git config --get remote.origin.url`)
 fi
 
 if [[ -z "${DEPARTMENT}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]]; then
@@ -18,12 +20,14 @@ if [[ -z "${DEPARTMENT}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]];
   exit 1
 fi
 
-tmpAREA=`git branch --show-current`
+if [[ -z "${AREA}" ]]; then
+  tmpAREA=`git branch --show-current`
 
-if [[ "${tmpAREA}" =~ (Production|Staging) ]]; then
-  AREA="${tmpAREA}"
-else
-  AREA="scratch"
+  if [[ "${tmpAREA}" =~ (Production|Staging) ]]; then
+    AREA="${tmpAREA}"
+  else
+    AREA="scratch"
+  fi
 fi
 
 echo "Initialize DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
