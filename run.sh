@@ -18,6 +18,7 @@ mkdir -p ${tf_dir}/store
 chmod -R ugo+rw ${tf_dir}
 
 docker run \
+    --dns 8.8.8.8 \
     --rm \
     --env AWS_ACCESS_KEY_ID \
     --env AWS_SECRET_ACCESS_KEY \
