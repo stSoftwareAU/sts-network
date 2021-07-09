@@ -8,6 +8,10 @@ cd "${BASE_DIR}"
 
 . ./init.sh
 
+if [[ -f pre-build.sh ]]; then
+    ./pre-build.sh
+fi 
+
 tf_dir=$(mktemp -d -t tf_XXXXXXXXXX)
 
 s3_tf="${S3_BUCKET}/${DOCKER_TAG}"
