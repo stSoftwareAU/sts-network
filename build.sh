@@ -14,7 +14,7 @@ fi
 
 tf_dir=$(mktemp -d -t tf_XXXXXXXXXX)
 
-s3_tf="${S3_BUCKET}/${DOCKER_TAG}"
+s3_tf="${S3_BUCKET}/${DOCKER_REPO}"
 
 aws s3 cp s3://${s3_tf} ${tf_dir} --recursive
 chmod -R ugo+rw ${tf_dir}
@@ -31,7 +31,7 @@ jq ".area=\"${AREA}\" | .region=\"${REGION}\" | .department=\"${DEPARTMENT}\"" $
 
 rm ${tmpVars}
 
-docker build --tag ${DOCKER_TAG}:latest .
+docker build --tag ${DOCKER_REPO}:latest .
 
 rm -r ${tf_dir}
 rm -f IaC/.auto.tfvars.json

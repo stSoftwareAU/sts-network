@@ -10,7 +10,7 @@ cd "${BASE_DIR}"
 
 tf_dir=$(mktemp -d -t tf_XXXXXXXXXX)
 
-s3_tf="${S3_BUCKET}/${DOCKER_TAG}"
+s3_tf="${S3_BUCKET}/${DOCKER_REPO}"
 
 aws s3 cp s3://${s3_tf} ${tf_dir} --recursive
 
@@ -24,7 +24,7 @@ docker run \
     --env AWS_SECRET_ACCESS_KEY \
     --env AWS_SESSION_TOKEN \
     --volume ${tf_dir}/store:/home/IaC/store \
-    ${DOCKER_TAG}:latest \
+    ${DOCKER_REPO}:latest \
     apply
 
 aws s3 cp ${tf_dir}/store s3://${s3_tf}/store --recursive

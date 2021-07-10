@@ -19,16 +19,16 @@ ECR="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
 aws ecr get-login-password | docker login --username AWS --password-stdin ${ECR}
 
-REPO="${ECR}/${DOCKER_TAG}"
+DOCKER_URI="${ECR}/${DOCKER_REPO}"
 
-docker pull ${REPO}:${GIT_COMMIT}
+docker pull ${DOCKER_URI}:${GIT_COMMIT}
 
-docker tag ${REPO}:${GIT_COMMIT} \
-           ${REPO}:${AREA}_${EXT}
+docker tag ${DOCKER_URI}:${GIT_COMMIT} \
+           ${DOCKER_URI}:${AREA}_${EXT}
 
-docker push ${REPO}:${AREA}_${EXT}
+docker push ${DOCKER_URI}:${AREA}_${EXT}
 
-docker tag ${REPO}:${GIT_COMMIT} \
-           ${REPO}:${AREA}
+docker tag ${DOCKER_URI}:${GIT_COMMIT} \
+           ${DOCKER_URI}:${AREA}
 
-docker push ${REPO}:${AREA}
+docker push ${DOCKER_URI}:${AREA}
