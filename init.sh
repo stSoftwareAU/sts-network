@@ -8,7 +8,7 @@ cd "${BASE_DIR}"
 
 ENV_FILE=".env.properties"
 if [[ -f ${ENV_FILE} ]]; then
-    source ${ENV_FILE} 
+    source ${ENV_FILE}
 fi
 
 if [[ -z "${DEPARTMENT}" ]] || [[ -z "${ACCOUNT_ID}" ]] || [[ -z "${REGION}" ]]; then
@@ -25,6 +25,8 @@ if [[ -z "${AREA}" ]]; then
     AREA="scratch"
   fi
 fi
+
+export AREA
 
 echo "Initialize DEPARTMENT(${DEPARTMENT}), ACCOUNT_ID(${ACCOUNT_ID}), REGION(${REGION}) and AREA(${AREA})"
 
@@ -59,7 +61,7 @@ if [[ ! -z "${ROLE}" ]]; then
   export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
   export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
   export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
-fi 
+fi
 
 export S3_BUCKET=`echo "${DEPARTMENT}-terraform-${AREA}-${REGION}"|tr "[:upper:]" "[:lower:]"`
 LIST_BUCKETS=`aws s3api list-buckets`
