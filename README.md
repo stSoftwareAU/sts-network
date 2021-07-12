@@ -27,5 +27,5 @@ The Terraform IaC (Infrastructure a Code) script creates
 ## Diagram
 ![Alt text](/documentation/images/dga-network-pipeline.png?raw=true "Network Diagram")
 
-https://lucid.app/lucidchart/invitations/accept/inv_217a3583-7d0e-45f3-b890-a897228feff0?viewport_loc=-387%2C-77%2C1664%2C870%2C2w9TLrWH43pa
+[Source](https://lucid.app/lucidchart/invitations/accept/inv_217a3583-7d0e-45f3-b890-a897228feff0?viewport_loc=-387%2C-77%2C1664%2C870%2C2w9TLrWH43pa)
 
