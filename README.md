@@ -24,6 +24,6 @@ PRIVATE  | Subnet that routes to the Internet, but not vice versa.
 PUBLIC   | Subnet connected to the Internet.
 
 ## Service Access
-To access services within a "private" subnet, we will use [AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/create-ssm-doc.html) instead of a bastion host or other solution.
+To access services within a "private" subnet, we will use [AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/create-ssm-doc.html).
 
 [^1]:[__Diagram Source__](https://lucid.app/lucidchart/invitations/accept/inv_217a3583-7d0e-45f3-b890-a897228feff0?viewport_loc=-387%2C-77%2C1664%2C870%2C2w9TLrWH43pa)
