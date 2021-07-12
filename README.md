@@ -1,7 +1,7 @@
 # Secure Network Architecture Model
 ![Alt text](https://lucid.app/publicSegments/view/59ab75ca-07e4-4ebf-80dc-3cbe4cbaad31/image.png "Network Diagram ^1")
 
-## The Terraform IaC (Infrastructure a Code) script creates 
+## The Terraform IaC (Infrastructure a Code) script generates 
 1. A VPC (  Virtual Private Cloud ) "Main"
 2. A "public" and "private" subnet for each availability zone ( three ).
 3. For in each "public" subnet, a NAT Gateway 
