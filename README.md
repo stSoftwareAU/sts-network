@@ -1,18 +1,5 @@
-# Generic Secure Network Architecture
+# Secure Network Architecture Model
 ![Alt text](https://lucid.app/publicSegments/view/59ab75ca-07e4-4ebf-80dc-3cbe4cbaad31/image.png "Network Diagram ^1")
-
-All AWS accounts that host services ( all but the user identity AWS account) will use this generic network layout. 
-
-For each availability zone, there will be a "public" and "private" subnet. DGA will place all Self-managed services in a "private" subnet; only AWS managed services ( Load Balancer, NAT Gateway etc.) will be placed in a "public" subnet.
-
-## [Subnet types.](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ec2.SubnetType.html)
-Name | Description
------|------------
-PRIVATE  | Subnet that routes to the Internet, but not vice versa.
-PUBLIC   | Subnet connected to the Internet.
-
-## Service Access
-To access services within a "private" subnet, we will use [AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/create-ssm-doc.html) instead of a bastion host or other solution.
 
 ## The Terraform IaC (Infrastructure a Code) script creates 
 1. A VPC (  Virtual Private Cloud ) "Main"
@@ -25,5 +12,18 @@ To access services within a "private" subnet, we will use [AWS Systems Manager](
 8. An internet gateway
 9. A Elastic IP for each NAT Gateway, which will mean all "private" sevices will have a known and static set of IPs.
 
-[^1]:[__Diagram Source__](https://lucid.app/lucidchart/invitations/accept/inv_217a3583-7d0e-45f3-b890-a897228feff0?viewport_loc=-387%2C-77%2C1664%2C870%2C2w9TLrWH43pa)
 
+All AWS accounts that host services ( all but the user identity AWS account) will use this network model. 
+
+For each availability zone, there will be a "public" and "private" subnet. Data.gov.au (DGA) will place all Self-managed services in a "private" subnet; only AWS managed services ( Load Balancer, NAT Gateway etc.) will be placed in a "public" subnet.
+
+## [Subnet types.](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ec2.SubnetType.html)
+Name | Description
+-----|------------
+PRIVATE  | Subnet that routes to the Internet, but not vice versa.
+PUBLIC   | Subnet connected to the Internet.
+
+## Service Access
+To access services within a "private" subnet, we will use [AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/create-ssm-doc.html) instead of a bastion host or other solution.
+
+[^1]:[__Diagram Source__](https://lucid.app/lucidchart/invitations/accept/inv_217a3583-7d0e-45f3-b890-a897228feff0?viewport_loc=-387%2C-77%2C1664%2C870%2C2w9TLrWH43pa)
