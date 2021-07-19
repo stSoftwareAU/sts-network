@@ -11,36 +11,47 @@ pipeline {
     environment {
         GIT_CREDENTIALS = 'e0c8abc2-7a04-4a41-96b1-1d56c0cf1874'
     }
-
+    options {
+        timeout(time: 1, unit: 'HOURS')
+    }
     stages {
-        
+
         stage('Build') {
-            
+
             agent {
-                label 'ec2-large'
+                docker{
+                    image 'dga-tools:latest'
+                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+                }
             }
-            options {
-                timeout(time: 1, unit: 'HOURS')
-            }
-            environment{
 
-                ACCOUNT_ID = sh(
-                    script: "curl 'http://169.254.169.254/latest/dynamic/instance-identity/document' |jq -r .accountId", 
-                    returnStdout: true
-                ).trim()
-
-                REGION = sh(
-                    script: "curl 'http://169.254.169.254/latest/dynamic/instance-identity/document' |jq -r .region", 
-                    returnStdout: true
-                ).trim()
-            }
             steps {
-               
-                sh './build.sh'
 
-                sh './push.sh'
+                sh '''\
+                    #!/bin/bash
+                    set -e
 
-                sh './release.sh'
+                    /home/tools/build.sh
+                    /home/tools/push.sh
+                '''.stripIndent()
+
+            }
+        }
+
+        stage('Release') {
+
+            agent {
+                docker{
+                    image 'dga-tools:latest'
+                    args '--volume /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+
+            steps {
+
+                sh '''\
+                    /home/tools/release.sh
+                '''.stripIndent()
             }
         }
     }
