@@ -52,7 +52,7 @@ pipeline {
                 sh '''\
                     #!/bin/bash
                     set -e
-
+                    ls -l /home/tools/
                     /home/tools/release.sh
                 '''.stripIndent()
             }
