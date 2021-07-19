@@ -50,6 +50,9 @@ pipeline {
             steps {
 
                 sh '''\
+                    #!/bin/bash
+                    set -e
+
                     /home/tools/release.sh
                 '''.stripIndent()
             }
