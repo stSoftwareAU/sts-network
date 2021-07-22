@@ -24,6 +24,12 @@ variable "region" {
   description = "The AWS region"
 }
 
+variable "reduced_redundancy" {
+  type        = bool
+  description = "Reduce the redundancy and save costs ( non production only)"
+  default = false
+}
+
 variable "main_cidr_block" {
   type        = string
   description = "Address range for the virtual network in CIDR notation. CIDR must be a /21."
@@ -75,7 +81,6 @@ locals {
   private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6) != "Public" }
 }
 
-
 resource "aws_vpc" "main" {
   cidr_block           = var.main_cidr_block
   enable_dns_hostnames = true
@@ -123,8 +128,12 @@ resource "aws_subnet" "public" {
   }
 }
 
+locals{
+  nat_count=var.reduced_redundancy ? 1: length(aws_subnet.public)
+}
+
 resource "aws_eip" "nat" {
-  count = length(aws_subnet.public)
+  count = local.nat_count
   vpc   = true
 
   tags = {
@@ -133,7 +142,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "nat" {
-  count = length(aws_subnet.public)
+  count = local.nat_count
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = values(aws_subnet.public)[count.index].id
@@ -175,7 +184,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat[count.index].id
+    nat_gateway_id = var.reduced_redundancy ?aws_nat_gateway.nat[0].id: aws_nat_gateway.nat[count.index].id
   }
 
   tags = {
