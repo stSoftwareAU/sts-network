@@ -371,3 +371,14 @@ resource "aws_s3_bucket_public_access_block" "logs" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+/**
+ * Disable the default VPC.
+ */
+ resource "aws_default_vpc" "default" {
+   enable_dns_support = false
+   enable_dns_hostnames = false
+   tags = {
+      Name = "Do not use"
+   }
+}
