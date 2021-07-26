@@ -27,7 +27,7 @@ variable "region" {
 variable "reduced_redundancy" {
   type        = bool
   description = "Reduce the redundancy and save costs ( non production only)"
-  default = false
+  default     = false
 }
 
 variable "main_cidr_block" {
@@ -128,8 +128,8 @@ resource "aws_subnet" "public" {
   }
 }
 
-locals{
-  nat_count=var.reduced_redundancy ? 1: length(aws_subnet.public)
+locals {
+  nat_count = var.reduced_redundancy ? 1 : length(aws_subnet.public)
 }
 
 resource "aws_eip" "nat" {
@@ -184,7 +184,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = var.reduced_redundancy ?aws_nat_gateway.nat[0].id: aws_nat_gateway.nat[count.index].id
+    nat_gateway_id = var.reduced_redundancy ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
   }
 
   tags = {
@@ -375,10 +375,10 @@ resource "aws_s3_bucket_public_access_block" "logs" {
 /**
  * Disable the default VPC.
  */
- resource "aws_default_vpc" "default" {
-   enable_dns_support = false
-   enable_dns_hostnames = false
-   tags = {
-      Name = "Do not use"
-   }
+resource "aws_default_vpc" "default" {
+  enable_dns_support   = false
+  enable_dns_hostnames = false
+  tags = {
+    Name = "Do not use"
+  }
 }
