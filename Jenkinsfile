@@ -8,9 +8,6 @@ pipeline {
         cron( 'H 3 * * 3') // UTC About Midday Sydney time
     }
 
-    environment {
-        GIT_CREDENTIALS = 'e0c8abc2-7a04-4a41-96b1-1d56c0cf1874'
-    }
     options {
         timeout(time: 1, unit: 'HOURS')
     }
