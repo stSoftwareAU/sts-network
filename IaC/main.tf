@@ -188,7 +188,7 @@ resource "aws_route_table" "private" {
   }
 
   route {
-    cidr_block     = data.aws_vpc_peering_connection.old_production.peer_cidr_block
+    cidr_block                = data.aws_vpc_peering_connection.old_production.peer_cidr_block
     vpc_peering_connection_id = data.aws_vpc_peering_connection.old_production.id
   }
 
@@ -391,7 +391,7 @@ resource "aws_default_vpc" "default" {
 /**
  * Old Production link
  */
- data "aws_vpc_peering_connection" "old_production" {
+data "aws_vpc_peering_connection" "old_production" {
   vpc_id          = aws_vpc.main.id
   peer_cidr_block = "172.31.0.0/16"
 }
