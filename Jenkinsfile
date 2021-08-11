@@ -48,6 +48,7 @@ pipeline {
               steps {
                 echo 'test..'
                 sh '''\
+                /home/tools/pull.sh
                 /home/tools/run.sh --require 2.2 --mode validate
                 '''
               }
