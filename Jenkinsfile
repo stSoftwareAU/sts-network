@@ -35,6 +35,36 @@ pipeline {
             }
         }
 
+        stage('QA') {
+          parallel {
+            stage('CheckVerson') {
+              agent {
+                label 'ec2-large'
+              }
+
+              steps {
+                echo 'test..'
+                sh '''\
+                /home/tools/run.sh --require 2.1 --mode reformat
+                '''
+              }
+            }
+            stage('CVE scan') {
+              agent {
+                label 'ec2-large'
+              }
+
+              steps {
+                echo 'scan..'
+
+                sh '''\
+                sleep 1
+                '''
+              }
+            }
+          }
+        }
+
         stage('Release') {
 
             agent {
