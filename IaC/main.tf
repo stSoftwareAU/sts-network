@@ -9,6 +9,9 @@ terraform {
   required_version = ">= 0.14.9"
 }
 
+/**
+ * Standard variables
+ */
 variable "area" {
   type        = string
   description = "The Area"
@@ -24,6 +27,38 @@ variable "region" {
   description = "The AWS region"
 }
 
+variable "package" {
+  type        = string
+  description = "The Package"
+  default     = "Unknown"
+}
+
+variable "who" {
+  type        = string
+  description = "Who did deployment"
+  default     = "Unknown"
+}
+
+variable "digest" {
+  type        = string
+  description = "The docker image Digest"
+  default     = "Unknown"
+}
+
+/* AWS provider and default tags */
+provider "aws" {
+  region = var.region
+  default_tags {
+    tags = {
+      Package    = var.package
+      Area       = var.area
+      Department = var.department
+      Who        = var.who
+      Digest     = var.digest
+    }
+  }
+}
+
 variable "reduced_redundancy" {
   type        = bool
   description = "Reduce the redundancy and save costs ( non production only)"
@@ -37,11 +72,6 @@ variable "main_cidr_block" {
     condition     = tonumber(regex("/(\\d+)", var.main_cidr_block)[0]) == 21
     error_message = "A CIDR range of /21 is required to support enough IPs."
   }
-}
-
-provider "aws" {
-  region = var.region
-
 }
 
 module "main_subnet_addrs" {
@@ -188,7 +218,7 @@ resource "aws_route_table" "private" {
   }
 
   route {
-    cidr_block     = data.aws_vpc_peering_connection.old_production.peer_cidr_block
+    cidr_block                = data.aws_vpc_peering_connection.old_production.peer_cidr_block
     vpc_peering_connection_id = data.aws_vpc_peering_connection.old_production.id
   }
 
@@ -391,7 +421,7 @@ resource "aws_default_vpc" "default" {
 /**
  * Old Production link
  */
- data "aws_vpc_peering_connection" "old_production" {
+data "aws_vpc_peering_connection" "old_production" {
   vpc_id          = aws_vpc.main.id
   peer_cidr_block = "172.31.0.0/16"
 }
