@@ -37,15 +37,18 @@ pipeline {
 
         stage('QA') {
           parallel {
-            stage('CheckVerson') {
+            stage('validate') {
               agent {
-                label 'ec2-large'
+                docker{
+                    image 'dga-tools:latest'
+                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+                }
               }
 
               steps {
                 echo 'test..'
                 sh '''\
-                /home/tools/run.sh --require 2.1 --mode reformat
+                /home/tools/run.sh --require 2.2 --mode validate
                 '''
               }
             }
