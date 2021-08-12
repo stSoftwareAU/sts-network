@@ -9,7 +9,10 @@ pipeline {
     }
 
     options {
-        timeout(time: 1, unit: 'HOURS')
+      timeout(time: 1, unit: 'HOURS')
+      disableConcurrentBuilds()
+      // retry(3)
+      parallelsAlwaysFailFast()
     }
     stages {
 
