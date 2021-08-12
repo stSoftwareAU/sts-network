@@ -52,7 +52,7 @@ pipeline {
                 echo 'test..'
                 sh '''\
                 /home/tools/pull.sh
-                /home/tools/run.sh --require 2.3 --mode validate
+                /home/tools/run.sh --require 2.4 --mode validate
                 '''
               }
             }
