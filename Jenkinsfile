@@ -6,7 +6,7 @@ pipeline {
     triggers {
         pollSCM( '* 22,23 * * 0-4')
         pollSCM( '* 0-8 * * 1-5')
-        cron( 'H H(2-3) * * H(1-5)') // UTC About Midday Sydney time on a workday.
+        cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
     }
 
     options {
