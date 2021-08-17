@@ -4,12 +4,15 @@
 pipeline {
     agent none
     triggers {
-        pollSCM( '* 0-8 * * 1-5')
-        cron( 'H 3 * * 3') // UTC About Midday Sydney time
+        pollSCM( '* 22,23,0-8 * * 0-5')
+        cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
     }
 
     options {
-        timeout(time: 1, unit: 'HOURS')
+      timeout(time: 1, unit: 'HOURS')
+      disableConcurrentBuilds()
+      // retry(3)
+      parallelsAlwaysFailFast()
     }
     stages {
 
@@ -33,6 +36,40 @@ pipeline {
                 '''.stripIndent()
 
             }
+        }
+
+        stage('QA') {
+          parallel {
+            stage('validate') {
+              agent {
+                docker{
+                    image 'dga-tools:latest'
+                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+                }
+              }
+
+              steps {
+                echo 'test..'
+                sh '''\
+                /home/tools/pull.sh
+                /home/tools/run.sh --require 2.4 --mode validate
+                '''
+              }
+            }
+            stage('CVE scan') {
+              agent {
+                label 'ec2-large'
+              }
+
+              steps {
+                echo 'scan..'
+
+                sh '''\
+                sleep 1
+                '''
+              }
+            }
+          }
         }
 
         stage('Release') {
