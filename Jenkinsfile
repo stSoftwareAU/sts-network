@@ -52,20 +52,23 @@ pipeline {
                 echo 'test..'
                 sh '''\
                 /home/tools/pull.sh
-                /home/tools/run.sh --require 2.4 --mode validate
+                /home/tools/run.sh --require 2.6 --mode validate
                 '''
               }
             }
             stage('CVE scan') {
               agent {
-                label 'ec2-large'
+		docker{
+                    image 'dga-tools:latest'
+                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+                }	
               }
 
               steps {
                 echo 'scan..'
 
                 sh '''\
-                sleep 1
+                /home/tools/cve-scan.sh
                 '''
               }
             }
