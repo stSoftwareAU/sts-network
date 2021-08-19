@@ -58,18 +58,19 @@ pipeline {
             }
             stage('CVE scan') {
               agent {
-		docker{
-                    image 'dga-tools:latest'
-                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
-                }	
+                docker{
+                  image 'dga-tools:latest'
+                  args '--volume /var/run/docker.sock:/var/run/docker.sock'
+                }
               }
 
               steps {
-                echo 'scan..'
-
                 sh '''\
+                #!/bin/bash
+                set -e
+                
                 /home/tools/cve-scan.sh
-                '''
+                '''.stripIndent()
               }
             }
           }
