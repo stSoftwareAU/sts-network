@@ -96,4 +96,9 @@ pipeline {
             }
         }
     }
+    post {
+        always {
+            archiveArtifacts artifacts: 'cve-scan.json', fingerprint: true
+        }
+    }    
 }
