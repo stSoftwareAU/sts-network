@@ -1,6 +1,3 @@
-/*
- * WARNING: Automatically copied from dga-tools
- */
 pipeline {
     agent none
     triggers {
@@ -9,84 +6,83 @@ pipeline {
     }
 
     options {
-      timeout(time: 1, unit: 'HOURS')
-      disableConcurrentBuilds()
-      // retry(3)
-      parallelsAlwaysFailFast()
+        timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds()
+        // retry(3)
+        parallelsAlwaysFailFast()
     }
+
     stages {
-
         stage('Build') {
-
             agent {
-                docker{
-                    image 'dga-tools:latest'
-                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
-                }
+                label 'ec2-large'
             }
 
             steps {
-
                 sh '''\
-                    #!/bin/bash
-                    set -e
+                #!/bin/bash
+                set -e
 
-                    /home/tools/build.sh
-                    /home/tools/push.sh
-                '''.stripIndent()
+                ./build.sh
 
+                ./push.sh
+                '''
             }
         }
 
         stage('QA') {
-          parallel {
-            stage('validate') {
-              agent {
-                docker{
-                    image 'dga-tools:latest'
-                    args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
-                }
-              }
+            parallel {
+                stage('Selenium') {
+                    agent {
+                        label 'ec2-large'
+                    }
 
-              steps {
-                echo 'test..'
-                sh '''\
-                /home/tools/pull.sh
-                /home/tools/run.sh --require 2.6 --mode validate
-                '''
-              }
-            }
-            stage('CVE scan') {
-              agent {
-                docker{
-                  image 'dga-tools:latest'
-                  args '--volume /var/run/docker.sock:/var/run/docker.sock'
+                    steps {
+                        echo 'test..'
+                        sh '''\
+                        sleep 1
+                        '''
+                    }
                 }
-              }
+                stage('CVE scan') {
+                    agent {
+                        docker{
+                        image 'dga-tools:latest'
+                        args '--volume /var/run/docker.sock:/var/run/docker.sock'
+                        }
+                    }
 
-              steps {
-                sh '''\
-                #!/bin/bash
-                set -e
-                
-                /home/tools/cve-scan.sh
-                '''.stripIndent()
-              }
+                    steps {
+                        sh '''\
+                        #!/bin/bash
+                        set -e
+                        
+                        /home/tools/cve-scan.sh
+                        '''.stripIndent()
+                    } 
+                    post {
+                        always {
+                            sh '''\
+                            #!/bin/bash
+                            set -e
+                            ls
+                            pwd
+                            '''
+                            archiveArtifacts artifacts: 'cve-scan.json', fingerprint: true
+                        }    
+                    } 
+                }
             }
-          }
         }
-
         stage('Release') {
-
             agent {
-                docker{
+                docker {
                     image 'dga-tools:latest'
                     args '--volume /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
 
             steps {
-
                 sh '''\
                     #!/bin/bash
                     set -e
@@ -95,10 +91,5 @@ pipeline {
                 '''.stripIndent()
             }
         }
-    }
-    post {
-        always {
-            archiveArtifacts artifacts: 'cve-scan.json', fingerprint: true
-        }
-    }    
+    }   
 }
