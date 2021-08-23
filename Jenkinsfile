@@ -23,7 +23,7 @@ pipeline {
           args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
         }
       }
-      
+
       steps {
         sh '''\
           #!/bin/bash
@@ -46,10 +46,9 @@ pipeline {
           }
 
           steps {
-            echo 'test..'
             sh '''\
               /home/tools/pull.sh
-              /home/tools/run.sh --require 2.7 --mode validate
+              /home/tools/run.sh --require 2.9 --mode validate
             '''.stripIndent()
           }
         }
