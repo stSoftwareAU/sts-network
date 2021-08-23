@@ -17,11 +17,13 @@ pipeline {
 
   stages {
     stage('Build') {
-      docker{
-        image 'dga-tools:latest'
-        args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+      agent {
+        docker{
+          image 'dga-tools:latest'
+          args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+        }
       }
-
+      
       steps {
         sh '''\
           #!/bin/bash
@@ -94,5 +96,5 @@ pipeline {
         '''.stripIndent()
       }
     }
-  }   
+  }
 }
