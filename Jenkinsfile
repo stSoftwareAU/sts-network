@@ -27,7 +27,7 @@ pipeline {
       steps {
         sh '''\
           #!/bin/bash
-          set -e
+          set -ex
 
           /home/tools/build.sh
           /home/tools/push.sh
@@ -47,13 +47,17 @@ pipeline {
 
           steps {
             sh '''\
+              #!/bin/bash
+              set -ex
+
               /home/tools/pull.sh
-              /home/tools/run.sh --require 2.9 --mode validate
+              /home/tools/run.sh --require 2.12 --mode validate
             '''.stripIndent()
           }
         }
         
         stage('CVE scan') {
+          when { branch 'Develop' }
           agent {
             docker{
               image 'dga-tools:latest'
@@ -64,7 +68,7 @@ pipeline {
           steps {
             sh '''\
               #!/bin/bash
-              set -e
+              set -ex
               
               /home/tools/cve-scan.sh
             '''.stripIndent()
@@ -89,7 +93,7 @@ pipeline {
       steps {
         sh '''\
           #!/bin/bash
-          set -e
+          set -ex
 
           /home/tools/release.sh
         '''.stripIndent()
