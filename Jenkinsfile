@@ -11,7 +11,7 @@ pipeline {
   options {
     timeout(time: 1, unit: 'HOURS')
     disableConcurrentBuilds()
-    // retry(3)
+    
     parallelsAlwaysFailFast()
   }
 
@@ -51,13 +51,13 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 2.12 --mode validate
+              /home/tools/run.sh --require 2.13 --mode validate
             '''.stripIndent()
           }
         }
         
         stage('CVE scan') {
-          when { anyOf{ branch 'Develop', changeRequest target: 'Develop'} }
+          when { anyOf{ branch 'Develop'; changeRequest target: 'Develop'} }
           agent {
             docker{
               image 'dga-tools:latest'
