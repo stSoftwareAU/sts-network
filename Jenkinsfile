@@ -25,6 +25,13 @@ pipeline {
       }
 
       steps {
+        script{
+          /**
+           * Keep the COMMIT at the start of the build process so that it doesn't change during the build.
+           */
+          env.COMMIT_ID=env.GIT_COMMIT
+        }
+
         sh '''\
           #!/bin/bash
           set -ex
@@ -51,7 +58,7 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 2.14 --mode validate
+              /home/tools/run.sh --require 2.15 --mode validate
             '''.stripIndent()
           }
         }
