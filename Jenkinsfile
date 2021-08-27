@@ -57,7 +57,7 @@ pipeline {
         }
         
         stage('CVE scan') {
-          when { branch 'Develop' }
+          when { anyOf{ branch 'Develop', changeRequest target: 'Develop'} }
           agent {
             docker{
               image 'dga-tools:latest'
