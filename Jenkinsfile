@@ -11,7 +11,7 @@ pipeline {
   options {
     timeout(time: 1, unit: 'HOURS')
     disableConcurrentBuilds()
-    // retry(3)
+    
     parallelsAlwaysFailFast()
   }
 
@@ -25,9 +25,16 @@ pipeline {
       }
 
       steps {
+        script{
+          /**
+           * Keep the COMMIT at the start of the build process so that it doesn't change during the build.
+           */
+          env.COMMIT_ID=env.GIT_COMMIT
+        }
+
         sh '''\
           #!/bin/bash
-          set -e
+          set -ex
 
           /home/tools/build.sh
           /home/tools/push.sh
@@ -47,13 +54,17 @@ pipeline {
 
           steps {
             sh '''\
+              #!/bin/bash
+              set -ex
+
               /home/tools/pull.sh
-              /home/tools/run.sh --require 2.9 --mode validate
+              /home/tools/run.sh --require 2.15 --mode validate
             '''.stripIndent()
           }
         }
         
         stage('CVE scan') {
+          when { anyOf{ branch 'Develop'; changeRequest target: 'Develop'} }
           agent {
             docker{
               image 'dga-tools:latest'
@@ -64,7 +75,7 @@ pipeline {
           steps {
             sh '''\
               #!/bin/bash
-              set -e
+              set -ex
               
               /home/tools/cve-scan.sh
             '''.stripIndent()
@@ -89,7 +100,7 @@ pipeline {
       steps {
         sh '''\
           #!/bin/bash
-          set -e
+          set -ex
 
           /home/tools/release.sh
         '''.stripIndent()
