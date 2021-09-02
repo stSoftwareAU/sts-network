@@ -217,11 +217,6 @@ resource "aws_route_table" "private" {
     nat_gateway_id = var.reduced_redundancy ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
   }
 
-  route {
-    cidr_block                = data.aws_vpc_peering_connection.old_production.peer_cidr_block
-    vpc_peering_connection_id = data.aws_vpc_peering_connection.old_production.id
-  }
-
   tags = {
     Name = join("", ["Private-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
   }
@@ -416,12 +411,4 @@ resource "aws_default_vpc" "default" {
   tags = {
     Name = "Do not use"
   }
-}
-
-/**
- * Old Production link
- */
-data "aws_vpc_peering_connection" "old_production" {
-  vpc_id          = aws_vpc.main.id
-  peer_cidr_block = "172.31.0.0/16"
 }
