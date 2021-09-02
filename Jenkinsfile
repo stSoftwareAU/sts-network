@@ -102,7 +102,7 @@ pipeline {
     }
 
     stage('Prompt'){
-      when{ expression { env.CVE_SCAN_FAILED }}
+      when{ expression { env.CVE_SCAN_FAILED == true }}
       steps{
         script {
           try {
@@ -110,12 +110,7 @@ pipeline {
               input( message: 'CVE scan detected issues', ok: "Continue?")
             }
           } catch(err) { // timeout reached or input false
-            def user = err.getCauses()[0].getUser()
-            if('SYSTEM' == user.toString()) { // SYSTEM means timeout.
-              echo "Timeout"
-            } else { 
-              echo "Aborted by: [${user}]"
-            }
+            echo "Caught: ${err}"
             currentBuild.result = 'FAILURE'
           }
         }
