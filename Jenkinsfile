@@ -15,6 +15,10 @@ pipeline {
     parallelsAlwaysFailFast()
   }
 
+  parameters {
+    booleanParam(name: 'CVE_SCAN_FAILED', defaultValue: false)
+  }
+
   stages {
     stage('Build') {
       agent {
@@ -73,12 +77,20 @@ pipeline {
           }
 
           steps {
-            sh '''\
-              #!/bin/bash
-              set -ex
-              
-              /home/tools/cve-scan.sh
-            '''.stripIndent()
+            script{
+              try{
+                sh '''\
+                  #!/bin/bash
+                  set -ex
+
+                  /home/tools/cve-scan.sh
+                '''.stripIndent()
+              }
+              catch(err){
+                echo "Caught: ${err}"
+                env.CVE_SCAN_FAILED=true
+              }
+            }
           } 
           post {
             always {
@@ -88,6 +100,27 @@ pipeline {
         }
       }
     }
+
+    stage('Prompt'){
+      when{ expression { env.CVE_SCAN_FAILED }}
+      steps{
+        script {
+          try {
+            timeout(time: 15, unit: 'MINUTES') { 
+              input( message: 'CVE scan detected issues', ok: "Continue?")
+            }
+          } catch(err) { // timeout reached or input false
+            def user = err.getCauses()[0].getUser()
+            if('SYSTEM' == user.toString()) { // SYSTEM means timeout.
+              echo "Timeout"
+            } else { 
+              echo "Aborted by: [${user}]"
+            }
+            currentBuild.result = 'FAILURE'
+          }
+        }
+      }
+    }    
 
     stage('Release') {
       agent {
