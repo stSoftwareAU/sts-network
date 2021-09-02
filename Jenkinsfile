@@ -102,7 +102,7 @@ pipeline {
     }
 
     stage('Prompt'){
-      when{ expression { env.CVE_SCAN_FAILED == true }}
+      when{ expression { env.CVE_SCAN_FAILED == 'true' }}
       steps{
         script {
           try {
