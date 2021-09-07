@@ -59,12 +59,6 @@ provider "aws" {
   }
 }
 
-variable "reduced_redundancy" {
-  type        = bool
-  description = "Reduce the redundancy and save costs ( non production only)"
-  default     = false
-}
-
 variable "main_cidr_block" {
   type        = string
   description = "Address range for the virtual network in CIDR notation. CIDR must be a /21."
@@ -159,7 +153,7 @@ resource "aws_subnet" "public" {
 }
 
 locals {
-  nat_count = var.reduced_redundancy ? 1 : length(aws_subnet.public)
+  nat_count = lower(var.area) != "production" ? 1 : length(aws_subnet.public)
 }
 
 resource "aws_eip" "nat" {
@@ -214,7 +208,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = var.reduced_redundancy ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
+    nat_gateway_id = local.nat_count==1 ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
   }
 
   tags = {
