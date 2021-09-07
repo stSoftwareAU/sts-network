@@ -62,7 +62,7 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 3.1 --mode validate
+              /home/tools/run.sh --require 3.2 --mode validate
             '''.stripIndent()
           }
         }
