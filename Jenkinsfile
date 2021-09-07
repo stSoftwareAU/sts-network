@@ -15,10 +15,6 @@ pipeline {
     parallelsAlwaysFailFast()
   }
 
-  parameters {
-    booleanParam(name: 'CVE_SCAN_FAILED', defaultValue: false)
-  }
-
   stages {
     stage('Build') {
       agent {
@@ -85,6 +81,7 @@ pipeline {
 
                   /home/tools/cve-scan.sh
                 '''.stripIndent()
+                env.CVE_SCAN_FAILED=false
               }
               catch(err){
                 echo "Caught: ${err}"
