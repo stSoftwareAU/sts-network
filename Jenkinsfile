@@ -1,5 +1,5 @@
 /*
- * WARNING: Automatically copied from dga-tools.
+ * WARNING: Automatically copied from dga-tools
  */
 pipeline {
   agent none
