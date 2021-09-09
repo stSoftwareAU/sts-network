@@ -11,29 +11,25 @@ pipeline {
   options {
     timeout(time: 1, unit: 'HOURS')
     disableConcurrentBuilds()
-    
     parallelsAlwaysFailFast()
-  }
-
-  parameters {
-    booleanParam(name: 'CVE_SCAN_FAILED', defaultValue: false)
   }
 
   stages {
     stage('Build') {
       agent {
-        docker{
+        docker {
           image 'dga-tools:latest'
           args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
         }
       }
 
       steps {
-        script{
-          /**
-           * Keep the COMMIT at the start of the build process so that it doesn't change during the build.
-           */
-          env.COMMIT_ID=env.GIT_COMMIT
+       /**
+        * Keep the COMMIT at the start of the build process so
+        * that it doesn't change during the build.
+        */
+        script {
+          env.COMMIT_ID = env.GIT_COMMIT
         }
 
         sh '''\
@@ -47,10 +43,10 @@ pipeline {
     }
 
     stage('QA') {
-      parallel {          
+      parallel {
         stage('validate') {
           agent {
-            docker{
+            docker {
                 image 'dga-tools:latest'
                 args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
             }
@@ -62,60 +58,56 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 3.1 --mode validate
+              /home/tools/run.sh --require 3.2 --mode validate
             '''.stripIndent()
           }
         }
-        
+
         stage('CVE scan') {
-          when { anyOf{ branch 'Develop'; changeRequest target: 'Develop'} }
+          when { anyOf { branch 'Develop'; changeRequest target: 'Develop' } }
           agent {
-            docker{
+            docker {
               image 'dga-tools:latest'
               args '--volume /var/run/docker.sock:/var/run/docker.sock'
             }
           }
 
           steps {
-            script{
-              try{
+            script {
+              try {
                 sh '''\
                   #!/bin/bash
                   set -ex
 
                   /home/tools/cve-scan.sh
                 '''.stripIndent()
+                env.CVE_SCAN_FAILED = false
               }
-              catch(err){
+              catch (err) {
                 echo "Caught: ${err}"
-                env.CVE_SCAN_FAILED=true
+                env.CVE_SCAN_FAILED = true
               }
             }
-          } 
+          }
           post {
             always {
               archiveArtifacts artifacts: 'cve-scan.json', fingerprint: true
-            }    
-          } 
+            }
+          }
         }
       }
     }
 
-    stage('Prompt'){
-      when{ expression { env.CVE_SCAN_FAILED == 'true' }}
-      steps{
+    stage('Prompt') {
+      when { expression { env.CVE_SCAN_FAILED == 'true' } }
+      steps {
         script {
-          try {
-            timeout(time: 15, unit: 'MINUTES') { 
-              input( message: 'CVE scan detected issues', ok: "Continue?")
-            }
-          } catch(err) { // timeout reached or input false
-            echo "Caught: ${err}"
-            currentBuild.result = 'FAILURE'
+          timeout(time: 15, unit: 'MINUTES') {
+            input( message: 'CVE scan detected issues', ok: 'Continue?')
           }
         }
       }
-    }    
+    }
 
     stage('Release') {
       agent {
