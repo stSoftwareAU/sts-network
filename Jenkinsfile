@@ -24,10 +24,11 @@ pipeline {
       }
 
       steps {
+       /**
+        * Keep the COMMIT at the start of the build process so
+        * that it doesn't change during the build.
+        */
         script {
-          /**
-           * Keep the COMMIT at the start of the build process so that it doesn't change during the build.
-           */
           env.COMMIT_ID = env.GIT_COMMIT
         }
 
@@ -101,13 +102,8 @@ pipeline {
       when { expression { env.CVE_SCAN_FAILED == 'true' } }
       steps {
         script {
-          try {
-            timeout(time: 15, unit: 'MINUTES') {
-              input( message: 'CVE scan detected issues', ok: 'Continue?')
-            }
-          } catch (err) { // timeout reached or input false
-            echo "Caught: ${err}"
-            currentBuild.result = 'FAILURE'
+          timeout(time: 15, unit: 'MINUTES') {
+            input( message: 'CVE scan detected issues', ok: 'Continue?')
           }
         }
       }
