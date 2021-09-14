@@ -1,8 +1,11 @@
 /*
  * WARNING: Automatically copied from dga-tools
  */
+TOOLS_IMAGE = 'dga-tools:latest'
+TOOLS_ARGS = '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
 pipeline {
   agent none
+
   triggers {
     pollSCM( '* 22,23,0-8 * * 0-5')
     cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
@@ -16,26 +19,24 @@ pipeline {
 
   stages {
     stage('Build') {
+
+      when {
+        environment name: 'CHANGE_ID', value: '' // Not a Pull Request
+        beforeAgent true
+      }
+
       agent {
         docker {
-          image 'dga-tools:latest'
-          args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+          image TOOLS_IMAGE
+          args TOOLS_ARGS
         }
       }
 
       steps {
-       /**
-        * Keep the COMMIT at the start of the build process so
-        * that it doesn't change during the build.
-        */
-        script {
-          env.COMMIT_ID = env.GIT_COMMIT
-        }
-
         sh '''\
           #!/bin/bash
           set -ex
-
+          env|grep GIT
           /home/tools/build.sh
           /home/tools/push.sh
         '''.stripIndent()
@@ -45,30 +46,40 @@ pipeline {
     stage('QA') {
       parallel {
         stage('validate') {
-          agent {
-            docker {
-                image 'dga-tools:latest'
-                args '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
-            }
+          when {
+            environment name: 'CHANGE_ID', value: '' // Not a Pull Request
+            beforeAgent true
           }
 
+          agent {
+            docker {
+              image TOOLS_IMAGE
+              args TOOLS_ARGS
+            }
+          }
           steps {
             sh '''\
               #!/bin/bash
               set -ex
-
+              env|grep GIT
               /home/tools/pull.sh
-              /home/tools/run.sh --require 3.4 --mode validate
+              /home/tools/run.sh --require 3.6 --mode validate
             '''.stripIndent()
           }
         }
 
         stage('CVE scan') {
-          when { anyOf { branch 'Develop'; changeRequest target: 'Develop' } }
+          when {
+            allOf {
+              anyOf { branch 'Develop'; changeRequest target: 'Develop' }
+              environment name: 'CHANGE_ID', value: '' // Not a Pull Request
+            }
+            beforeAgent true
+          }
           agent {
             docker {
-              image 'dga-tools:latest'
-              args '--volume /var/run/docker.sock:/var/run/docker.sock'
+              image TOOLS_IMAGE
+              args TOOLS_ARGS
             }
           }
 
@@ -78,7 +89,7 @@ pipeline {
                 sh '''\
                   #!/bin/bash
                   set -ex
-
+                  env|grep GIT
                   /home/tools/cve-scan.sh
                 '''.stripIndent()
                 env.CVE_SCAN_FAILED = false
@@ -99,7 +110,12 @@ pipeline {
     }
 
     stage('Prompt') {
-      when { expression { env.CVE_SCAN_FAILED == 'true' } }
+      agent none
+
+      when {
+        expression { env.CVE_SCAN_FAILED == 'true' }
+      }
+
       steps {
         script {
           timeout(time: 15, unit: 'MINUTES') {
@@ -110,10 +126,15 @@ pipeline {
     }
 
     stage('Release') {
+      when {
+        environment name: 'CHANGE_ID', value: ''
+        beforeAgent true
+      }
+
       agent {
         docker {
-          image 'dga-tools:latest'
-          args '--volume /var/run/docker.sock:/var/run/docker.sock'
+          image TOOLS_IMAGE
+          args TOOLS_ARGS
         }
       }
 
