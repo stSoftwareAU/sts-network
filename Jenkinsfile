@@ -36,7 +36,7 @@ pipeline {
         sh '''\
           #!/bin/bash
           set -ex
-          
+
           /home/tools/build.sh
           /home/tools/push.sh
         '''.stripIndent()
@@ -61,7 +61,7 @@ pipeline {
             sh '''\
               #!/bin/bash
               set -ex
-              
+
               /home/tools/pull.sh
               /home/tools/run.sh --require 3.6 --mode validate
             '''.stripIndent()
@@ -89,7 +89,7 @@ pipeline {
                 sh '''\
                   #!/bin/bash
                   set -ex
-                  
+
                   /home/tools/cve-scan.sh
                 '''.stripIndent()
                 env.CVE_SCAN_FAILED = false
