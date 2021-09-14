@@ -7,7 +7,7 @@ pipeline {
   agent none
 
   triggers {
-    pollSCM( '* 22,23,0-8 * * 0-5')
+    pollSCM( '* * * * *')
     cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
   }
 
