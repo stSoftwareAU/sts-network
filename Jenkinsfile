@@ -7,7 +7,7 @@ pipeline {
   agent none
 
   triggers {
-    pollSCM( '* 22,23,0-8 * * 0-5')
+    pollSCM( '* * * * *')
     cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
   }
 
@@ -36,7 +36,7 @@ pipeline {
         sh '''\
           #!/bin/bash
           set -ex
-          env|grep GIT
+
           /home/tools/build.sh
           /home/tools/push.sh
         '''.stripIndent()
@@ -61,7 +61,7 @@ pipeline {
             sh '''\
               #!/bin/bash
               set -ex
-              env|grep GIT
+
               /home/tools/pull.sh
               /home/tools/run.sh --require 3.6 --mode validate
             '''.stripIndent()
@@ -89,7 +89,7 @@ pipeline {
                 sh '''\
                   #!/bin/bash
                   set -ex
-                  env|grep GIT
+
                   /home/tools/cve-scan.sh
                 '''.stripIndent()
                 env.CVE_SCAN_FAILED = false
