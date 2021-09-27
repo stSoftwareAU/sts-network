@@ -63,7 +63,7 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 3.6 --mode validate
+              /home/tools/run.sh --require 3.7 --mode validate
             '''.stripIndent()
           }
         }
@@ -71,7 +71,7 @@ pipeline {
         stage('CVE scan') {
           when {
             allOf {
-              anyOf { branch 'Develop'; changeRequest target: 'Develop' }
+              not { anyOf { branch 'Staging'; branch 'Production'; branch 'Identity'; branch 'Pipeline' } }
               environment name: 'CHANGE_ID', value: '' // Not a Pull Request
             }
             beforeAgent true
