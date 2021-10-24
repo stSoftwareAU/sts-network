@@ -266,6 +266,19 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+resource "aws_vpc_endpoint_route_table_association" "private-s3" {
+  count = length(aws_subnet.private)
+
+  route_table_id  = aws_route_table.private[count.index].id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
+resource "aws_vpc_endpoint_route_table_association" "public-s3" {
+  route_table_id  = aws_route_table.public.id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
+
 resource "aws_vpc_endpoint" "ssm" {
   vpc_id              = aws_vpc.main.id
   service_name        = join("", ["com.amazonaws.", var.region, ".ssm"])
