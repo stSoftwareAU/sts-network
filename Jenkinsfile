@@ -3,12 +3,19 @@
  */
 TOOLS_IMAGE = 'dga-tools:latest'
 TOOLS_ARGS = '--volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp:/tmp'
+
+/*
+ * UTC About Midday Sydney time on a Tuesday->Thursday for Prod/Identity,
+ * any work hour for Dev/Staging/Pipeline.
+ */
+CRON_TAB = BRANCH_NAME ==~ /(Production|Identity)/ ? "H H(2-3) * * H(2-4)" : BRANCH_NAME ==~ /(Develop|Staging|Pipeline)/ ? "H H(0-5) * * H(1-5)": ""
+
 pipeline {
   agent none
 
   triggers {
     pollSCM( '* * * * *')
-    cron( 'H H(2-3) * * H(2-4)') // UTC About Midday Sydney time on a workday.
+    cron( CRON_TAB) 
   }
 
   options {
