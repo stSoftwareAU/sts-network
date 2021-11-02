@@ -425,7 +425,7 @@ resource "aws_default_vpc" "default" {
 # | sort numRequests desc 
 # | limit 20
 resource "aws_cloudwatch_log_group" "DNS-lookup" {
-  name              = join( "/", ["", "route53", "DNS","lookup", aws_vpc.main.tags["Name"]])
+  name              = join("/", ["", "route53", "DNS", "lookup", aws_vpc.main.tags["Name"]])
   retention_in_days = 90
 }
 
