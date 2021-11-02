@@ -418,3 +418,24 @@ resource "aws_default_vpc" "default" {
     Name = "Do not use"
   }
 }
+
+# Log DNS queries 
+#
+# stats count( query_name) as numRequests by query_name
+# | sort numRequests desc 
+# | limit 20
+resource "aws_cloudwatch_log_group" "DNS-lookup" {
+  name              = join( "/", ["", "route53", "DNS","lookup", aws_vpc.main.tags["Name"]])
+  retention_in_days = 90
+}
+
+resource "aws_route53_resolver_query_log_config" "DNS-lookup" {
+  name            = "DNS-lookup"
+  destination_arn = aws_cloudwatch_log_group.DNS-lookup.arn
+
+}
+
+resource "aws_route53_resolver_query_log_config_association" "DNS-lookup" {
+  resolver_query_log_config_id = aws_route53_resolver_query_log_config.DNS-lookup.id
+  resource_id                  = aws_vpc.main.id
+}
