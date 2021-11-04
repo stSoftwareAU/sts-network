@@ -70,7 +70,8 @@ pipeline {
               set -ex
 
               /home/tools/pull.sh
-              /home/tools/run.sh --require 3.7 --mode validate
+              /home/tools/run.sh --require 3.8 --mode validate
+              /home/tools/secrets_scan.sh
             '''.stripIndent()
           }
         }
