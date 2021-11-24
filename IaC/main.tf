@@ -2,11 +2,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.39"
+      version = ">= 3.66"
     }
   }
 
-  required_version = ">= 0.14.9"
+  required_version = ">= 1.0.6"
 }
 
 /**
@@ -67,6 +67,8 @@ variable "main_cidr_block" {
     error_message = "A CIDR range of /21 is required to support enough IPs."
   }
 }
+
+data "aws_caller_identity" "current" {}
 
 module "main_subnet_addrs" {
   source = "hashicorp/subnets/cidr"
@@ -374,8 +376,6 @@ resource "aws_s3_bucket" "logs" {
       days = 30
     }
 
-    # abort_incomplete_multipart_upload_days=7
-
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
@@ -397,6 +397,23 @@ resource "aws_s3_bucket" "logs" {
       expired_object_delete_marker = true
     }
   }
+}
+
+resource "aws_s3_bucket_policy" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  policy = replace(
+    replace(
+      replace(
+        file("policies/s3-logs.json"),
+        "$${ACCOUNT_ID}",
+        data.aws_caller_identity.current.account_id
+      ),
+      "$${BUCKET_NAME}",
+      aws_s3_bucket.logs.bucket
+    ),
+    "$${ELB_ACCOUNT_ID}",
+    "783225319266" # ap-southeast-2 	Asia Pacific (Sydney) 	
+  )
 }
 
 resource "aws_s3_bucket_public_access_block" "logs" {
