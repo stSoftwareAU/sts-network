@@ -387,12 +387,12 @@ resource "aws_s3_bucket" "logs" {
     }
 
     transition {
-      days          = 90
+      days          = 365 # Keep on-line for one year.
       storage_class = "GLACIER"
     }
 
     expiration {
-      days = 365
+      days = 2587 # Delete after 7 years and one month.
 
       expired_object_delete_marker = true
     }
