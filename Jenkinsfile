@@ -25,9 +25,69 @@ pipeline {
   }
 
   stages {
+    stage('Reformat') {
+      when {
+        not {
+          anyOf {
+            branch 'Production';
+            branch 'Staging';
+            branch 'Identity';
+            branch 'Pipeline';
+            branch 'Develop'
+          }
+        }
+        beforeAgent true
+      }
+
+      agent {
+        docker {
+          image TOOLS_IMAGE
+          args TOOLS_ARGS
+        }
+      }
+
+      steps {
+        withCredentials([sshUserPrivateKey(credentialsId: "GitHub-ssh", keyFileVariable: 'keyfile')]) {
+
+          sh '''
+            mkdir -p ~/.ssh
+            ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+            echo "Host github.com" > ~/.ssh/config
+            echo " HostName github.com" >> ~/.ssh/config
+            echo " IdentityFile ${keyfile}" >> ~/.ssh/config
+
+            git config --global user.email "pipeline@data.gov.au"
+            git config --global user.name "Jenkins"
+        
+            cd ${WORKSPACE}
+            
+            rm -rf scratch
+            git clone ${GIT_URL//https:\\/\\/github.com\\//git@github.com:} scratch
+            cd scratch
+            git checkout ${BRANCH_NAME}
+            cat > /tmp/json.sh << EOF
+            FILE=\\$1
+            echo "reformat \\${FILE}"
+            tmpJSON=\\$(mktemp -t reformat_XXXXXXXXXX.json)
+            jq . \\${FILE} > \\${tmpJSON}
+            mv --force \\${tmpJSON} \\${FILE}
+            EOF
+            
+            find . -name "*.json" -exec bash /tmp/json.sh {} \\;
+
+            docker run --volume $(pwd)/IaC:/home/IaC --rm hashicorp/terraform:light -chdir=/home/IaC fmt
+            git add .
+            set +e
+
+            git commit -m "Reformat of code"
+            git push
+          '''.stripIndent()
+        }
+      }
+    }
     stage('Build') {
 
-      when {
+      when {        
         environment name: 'CHANGE_ID', value: '' // Not a Pull Request
         beforeAgent true
       }
@@ -84,6 +144,7 @@ pipeline {
             }
             beforeAgent true
           }
+          
           agent {
             docker {
               image TOOLS_IMAGE
@@ -93,19 +154,12 @@ pipeline {
 
           steps {
             script {
-              try {
-                sh '''\
-                  #!/bin/bash
-                  set -ex
+              sh '''\
+                #!/bin/bash
+                set -ex
 
-                  /home/tools/cve-scan.sh
-                '''.stripIndent()
-                env.CVE_SCAN_FAILED = false
-              }
-              catch (err) {
-                echo "Caught: ${err}"
-                env.CVE_SCAN_FAILED = true
-              }
+                /home/tools/cve-scan.sh
+              '''.stripIndent()
             }
           }
           post {
@@ -117,28 +171,21 @@ pipeline {
       }
     }
 
-    stage('Prompt') {
-      agent none
-
-      when {
-        expression { env.CVE_SCAN_FAILED == 'true' }
-      }
-
-      steps {
-        script {
-          timeout(time: 15, unit: 'MINUTES') {
-            input( message: 'CVE scan detected issues', ok: 'Continue?')
-          }
-        }
-      }
-    }
-
     stage('Release') {
       when {
-        environment name: 'CHANGE_ID', value: ''
+        allOf {
+          environment name: 'CHANGE_ID', value: ''
+          anyOf {
+            branch 'Production';
+            branch 'Staging';
+            branch 'Identity';
+            branch 'Pipeline';
+            branch 'Develop'
+          }
+        }
         beforeAgent true
       }
-
+      
       agent {
         docker {
           image TOOLS_IMAGE
@@ -152,6 +199,37 @@ pipeline {
           set -ex
 
           /home/tools/release.sh
+        '''.stripIndent()
+      }
+    }
+
+    stage('CleanUp') {
+      when {
+        not {
+          anyOf {
+            branch 'Production';
+            branch 'Staging';
+            branch 'Identity';
+            branch 'Pipeline';
+            branch 'Develop'
+          }
+        }
+        beforeAgent true
+      }
+      
+      agent {
+        docker {
+          image TOOLS_IMAGE
+          args TOOLS_ARGS
+        }
+      }
+
+      steps {
+        sh '''\
+          #!/bin/bash
+          set -ex
+
+          /home/tools/clean-up.sh
         '''.stripIndent()
       }
     }
