@@ -2,11 +2,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.39"
+      version = ">= 3.66"
     }
   }
 
-  required_version = ">= 0.14.9"
+  required_version = ">= 1.0.6"
 }
 
 /**
@@ -67,6 +67,8 @@ variable "main_cidr_block" {
     error_message = "A CIDR range of /21 is required to support enough IPs."
   }
 }
+
+data "aws_caller_identity" "current" {}
 
 module "main_subnet_addrs" {
   source = "hashicorp/subnets/cidr"
@@ -278,7 +280,6 @@ resource "aws_vpc_endpoint_route_table_association" "public-s3" {
   vpc_endpoint_id = aws_vpc_endpoint.s3.id
 }
 
-
 resource "aws_vpc_endpoint" "ssm" {
   vpc_id              = aws_vpc.main.id
   service_name        = join("", ["com.amazonaws.", var.region, ".ssm"])
@@ -375,8 +376,6 @@ resource "aws_s3_bucket" "logs" {
       days = 30
     }
 
-    # abort_incomplete_multipart_upload_days=7
-
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
@@ -388,16 +387,33 @@ resource "aws_s3_bucket" "logs" {
     }
 
     transition {
-      days          = 90
+      days          = 365 # Keep on-line for one year.
       storage_class = "GLACIER"
     }
 
     expiration {
-      days = 365
+      days = 2587 # Delete after 7 years and one month.
 
       expired_object_delete_marker = true
     }
   }
+}
+
+resource "aws_s3_bucket_policy" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  policy = replace(
+    replace(
+      replace(
+        file("policies/s3-logs.json"),
+        "$${ACCOUNT_ID}",
+        data.aws_caller_identity.current.account_id
+      ),
+      "$${BUCKET_NAME}",
+      aws_s3_bucket.logs.bucket
+    ),
+    "$${ELB_ACCOUNT_ID}",
+    "783225319266" # ap-southeast-2 	Asia Pacific (Sydney) 	
+  )
 }
 
 resource "aws_s3_bucket_public_access_block" "logs" {
@@ -418,4 +434,25 @@ resource "aws_default_vpc" "default" {
   tags = {
     Name = "Do not use"
   }
+}
+
+# Log DNS queries 
+#
+# stats count( query_name) as numRequests by query_name
+# | sort numRequests desc 
+# | limit 20
+resource "aws_cloudwatch_log_group" "DNS-lookup" {
+  name              = join("/", ["", "route53", "DNS", "lookup", aws_vpc.main.tags["Name"]])
+  retention_in_days = 90
+}
+
+resource "aws_route53_resolver_query_log_config" "DNS-lookup" {
+  name            = "DNS-lookup"
+  destination_arn = aws_cloudwatch_log_group.DNS-lookup.arn
+
+}
+
+resource "aws_route53_resolver_query_log_config_association" "DNS-lookup" {
+  resolver_query_log_config_id = aws_route53_resolver_query_log_config.DNS-lookup.id
+  resource_id                  = aws_vpc.main.id
 }
