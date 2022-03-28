@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.66"
+      version = ">= 4.6"
     }
   }
 
@@ -342,38 +342,41 @@ resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
  */
 resource "aws_s3_bucket" "logs" {
   bucket = join("-", [lower(var.department), "logs", lower(var.area), lower(var.region)])
-  acl    = "private"
 
   tags = {
     Name        = "Logs"
     Environment = var.area
   }
+}
 
-  versioning {
-    enabled = true
-  }
+resource "aws_s3_bucket_acl" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  acl    = "private"
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.bucket
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
+}
 
-  lifecycle_rule {
+resource "aws_s3_bucket_lifecycle_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
     id      = "log"
-    enabled = true
+    status = "Enabled"
 
-    prefix = "/"
-
-    tags = {
-      rule      = "log"
-      autoclean = "true"
+    filter {
+      prefix = "/"
     }
 
     noncurrent_version_expiration {
-      days = 30
+      noncurrent_days = 30
     }
 
     transition {
@@ -396,6 +399,13 @@ resource "aws_s3_bucket" "logs" {
 
       expired_object_delete_marker = true
     }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
