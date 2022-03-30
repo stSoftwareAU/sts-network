@@ -98,13 +98,26 @@ module "main_subnet_addrs" {
     {
       name     = "Public-C"
       new_bits = 4
-    }
+    },
+    {
+      name     = "Isolated-A"
+      new_bits = 6
+    },
+    {
+      name     = "Isolated-B"
+      new_bits = 6
+    },
+    {
+      name     = "Isolated-C"
+      new_bits = 6
+    },
   ]
 }
 
 locals {
-  public_cidr_blocks  = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6) == "Public" }
-  private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6) != "Public" }
+  public_cidr_blocks  = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 6)   == "Public" }
+  private_cidr_blocks = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 7)   == "Private" }
+  isolated_cidr_blocks  = { for k, v in module.main_subnet_addrs.network_cidr_blocks : k => v if substr(k, 0, 8) == "Isolated" }
 }
 
 resource "aws_vpc" "main" {
@@ -127,6 +140,19 @@ resource "aws_vpc" "main" {
 
  * https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ec2.SubnetType.html
  */
+ resource "aws_subnet" "isolated" {
+  for_each = local.isolated_cidr_blocks
+  vpc_id   = aws_vpc.main.id
+
+  availability_zone = join("", [var.region, lower(substr(each.key, -1, 1))])
+  cidr_block        = each.value
+
+  tags = {
+    Name = each.key
+    Type = "ISOLATED"
+  }
+}
+
 resource "aws_subnet" "private" {
   for_each = local.private_cidr_blocks
   vpc_id   = aws_vpc.main.id
@@ -217,6 +243,15 @@ resource "aws_route_table" "private" {
     Name = join("", ["Private-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
   }
 }
+resource "aws_route_table" "isolated" {
+  count = length(aws_subnet.isolated)
+
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = join("", ["Isolated-", upper(substr(strrev(values(aws_subnet.public)[count.index].availability_zone), 0, 1))])
+  }
+}
 
 resource "aws_route_table_association" "private" {
   count = length(aws_subnet.private)
@@ -275,6 +310,13 @@ resource "aws_vpc_endpoint_route_table_association" "private-s3" {
   vpc_endpoint_id = aws_vpc_endpoint.s3.id
 }
 
+resource "aws_vpc_endpoint_route_table_association" "isolated-s3" {
+  count = length(aws_subnet.isolated)
+
+  route_table_id  = aws_route_table.isolated[count.index].id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
 resource "aws_vpc_endpoint_route_table_association" "public-s3" {
   route_table_id  = aws_route_table.public.id
   vpc_endpoint_id = aws_vpc_endpoint.s3.id
@@ -319,19 +361,19 @@ resource "aws_vpc_endpoint" "ssmmessages" {
   }
 }
 
-resource "aws_vpc_endpoint_subnet_association" "ssm" {
+resource "aws_vpc_endpoint_subnet_association" "ssm-private" {
   count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssm.id
   subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
-resource "aws_vpc_endpoint_subnet_association" "ec2messages" {
+resource "aws_vpc_endpoint_subnet_association" "ec2messages-private" {
   count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ec2messages.id
   subnet_id       = values(aws_subnet.private)[count.index].id
 }
 
-resource "aws_vpc_endpoint_subnet_association" "ssmmessages" {
+resource "aws_vpc_endpoint_subnet_association" "ssmmessages-private" {
   count           = length(aws_subnet.private)
   vpc_endpoint_id = aws_vpc_endpoint.ssmmessages.id
   subnet_id       = values(aws_subnet.private)[count.index].id
